@@ -18,7 +18,15 @@ for entry in $SERVICES; do
 done
 
 for m in media/ssd run dev/pts dev/shm dev sys proc; do
-  umount $ROOT/$m 2>/dev/null || umount -l $ROOT/$m 2>/dev/null
+  if grep -q " $ROOT/$m " /proc/mounts; then
+    if umount $ROOT/$m 2>/dev/null; then
+      echo "$m: unmounted"
+    elif umount -l $ROOT/$m 2>/dev/null; then
+      echo "$m: lazy-unmounted"
+    else
+      echo "$m: FAILED to unmount"
+    fi
+  fi
 done
 
 if grep -q " $ROOT" /proc/mounts; then
