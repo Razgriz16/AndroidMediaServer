@@ -1,16 +1,32 @@
 #!/system/bin/sh
+# /data/adb/service.d/chroot-mount.sh
 export PATH=/data/data/com.termux/files/usr/bin:/system/bin:/system/xbin:$PATH
 ROOT=/data/data/com.termux/files/usr/var/lib/proot-distro/containers/ubuntu/rootfs
 LOG=/data/local/tmp/ubuntu-boot.log
+TAG=chroot-mount
 
-[ -d "$ROOT/etc" ] || { echo "rootfs not found at $ROOT"; exit 1; }
+log() {
+  echo "$(date '+%Y-%m-%d %H:%M:%S') [$TAG] $*" >> "$LOG"
+}
+
+# Send everything else (command noise, stray errors) to the log too, not the console
+exec >> "$LOG" 2>&1
+
+log "start"
+
+for i in $(seq 1 60); do
+  [ -d "$ROOT/etc" ] && break
+  sleep 2
+done
+
+[ -d "$ROOT/etc" ] || { log "rootfs not found at $ROOT"; exit 1; }
 
 mount | grep ' /data ' | grep -q nosuid && mount -o remount,dev,suid /data
 
 mnt() {
   target="$1"; shift
   grep -q " $target " /proc/mounts && return 0
-  mount "$@" || echo "FAILED: $*" >&2
+  mount "$@" || log "FAILED: $*"
 }
 
 mnt $ROOT/proc    -t proc   proc   $ROOT/proc
@@ -24,5 +40,5 @@ mnt $ROOT/run     -t tmpfs -o size=64M  tmpfs $ROOT/run
 rm -f $ROOT/etc/resolv.conf
 printf 'nameserver 1.1.1.1\nnameserver 8.8.8.8\n' > $ROOT/etc/resolv.conf
 
-echo "$(date): env mounted" >> $LOG
-grep -c " $ROOT" /proc/mounts | xargs echo "mounts active:"
+log "env mounted"
+log "mounts active: $(grep -c " $ROOT" /proc/mounts)"
