@@ -321,3 +321,46 @@ apt / startup expected ~2–5×; streaming throughput was already near-native.
 1. Prowlarr, Sonarr, qBittorrent.
 2. Firewall hardening — known blocklists.
 3. Jellyseerr, integrated with the above.
+
+---
+
+## References
+
+If something here stops making sense, these are the sources to re-read. Grouped
+by which part of the setup they explain.
+
+### Running things at boot / shutdown
+- **Magisk — Boot Scripts** — https://topjohnwu.github.io/Magisk/guides.html —
+  what `/data/adb/service.d/` is, `post-fs-data` vs `service` (late_start),
+  execution context. Explains why `service.d` runs before storage unlock and as
+  a non-app SELinux domain.
+- **Termux:Boot** — https://wiki.termux.com/wiki/Termux:Boot — the *intended*
+  way to auto-start Termux-user services (e.g. `sshd`, `termux-wake-lock`) on
+  boot, as the Termux user in the right context. Preferred over hand-rolling it
+  in a Magisk script.
+- **Termux — Remote Access** — https://wiki.termux.com/wiki/Remote_Access —
+  `sshd` setup, `passwd`, host keys, port 8022, `authorized_keys`.
+- https://github.com/tytydraco/KTweak
+
+### Useful sites to check out
+- **proot-distro** — https://github.com/termux/proot-distro — how the Ubuntu
+  rootfs is installed and where it puts things (`containers/<distro>/rootfs`).
+- **termux/proot#283** — https://github.com/termux/proot/issues/283 — the
+  Jellyfin/.NET heap-allocation crash under proot and the `DOTNET_GCHeapHardLimit`
+  workaround (moot under chroot, kept for history).
+- **Termux Wiki** — https://wiki.termux.com/wiki/Main_Page — general Termux
+  behaviour, `$PREFIX`, storage layout.
+- **`chroot(2)`** — https://man7.org/linux/man-pages/man2/chroot.2.html and
+  **`mount(8)`** — https://man7.org/linux/man-pages/man8/mount.8.html — the
+  `--bind`, `-t proc/sysfs/devpts/tmpfs`, and `remount` semantics the mount
+  script relies on.
+- https://www.termuxgenius.com/2026/08/how-to-fix-unable-to-locate-package.html
+- https://github.com/termux/proot/issues/283
+
+### Fun sites to check out for new integrations
+- https://github.com/AwesomeHomelab/awesome-homelab
+- https://github.com/awesome-selfhosted/awesome-selfhosted
+- https://github.com/Ralex91/Razzia
+- https://www.youtube.com/watch?v=_mP5z-IBVgU
+- https://github.com/iptv-org/iptv
+- https://www.youtube.com/watch?v=G-pi8fGJU7k
