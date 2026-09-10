@@ -60,15 +60,12 @@ elsewhere; deploy by copying them to the paths below.
 | `chroot_scripts/chroot-mount.sh` | `/data/adb/service.d/chroot-mount.sh` | root, at boot (Magisk `service.d`) |
 | `chroot_scripts/chroot-unmount.sh` | `/data/local/tmp/chroot-unmount.sh` | root, manually or from the shutdown watcher |
 | `chroot_scripts/chroot-unmount-watch.sh` | `/data/adb/service.d/chroot-unmount-watch.sh` | root, at boot — polls for shutdown, then calls the unmount script |
-| `jellyfin_scritps/start-jellyfin.sh` | `/data/local/tmp/start-jellyfin.sh` | root shell, manual |
-| `jellyfin_scritps/stop-jellyfin.sh` | `/data/local/tmp/stop-jellyfin.sh` | root shell, manual or from `chroot-unmount.sh` |
+| `jellyfin_scripts/start-jellyfin.sh` | `/data/local/tmp/start-jellyfin.sh` | root shell, manual |
+| `jellyfin_scripts/stop-jellyfin.sh` | `/data/local/tmp/stop-jellyfin.sh` | root shell, manual or from `chroot-unmount.sh` |
 | `ubuntu.sh` | `/data/data/com.termux/files/home/ubuntu.sh` | root shell — entry point into the container |
 
 `.env` and `poco-x3-chroot-setup.md` are gitignored (local secrets / long-form
 migration notes).
-
-> Folder name `jellyfin_scritps` is a typo ("scritps"). Left as-is because
-> renaming it means updating any deploy scripts/aliases that reference it.
 
 ---
 
@@ -79,7 +76,7 @@ migration notes).
 sshd            # start the ssh daemon
 passwd          # set a password for ssh login
 ```
-Then from the PC: `ssh -p 8022 u0_a201@192.168.1.180`
+Then from the PC: `ssh -p 8022 u0_a201@192.168.1.198`
 
 ### Enter the Ubuntu container
 ```sh
@@ -162,7 +159,7 @@ mount | grep ' /data ' | grep nosuid     # is /data still nosuid/nodev
 ```sh
 # scp port flag is capital -P (lowercase -p means "preserve timestamps")
 scp -P 8022 -r "C:\Users\pdavi\Videos\Some.Show.S03" \
-    u0_a201@192.168.1.180:/mnt/media_rw/FABF-AE53/media/tv
+    u0_a201@192.168.1.198:/mnt/media_rw/FABF-AE53/media/tv
 ```
 
 ---
