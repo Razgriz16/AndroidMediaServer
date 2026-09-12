@@ -73,8 +73,6 @@ elsewhere; deploy by copying them to the paths below.
 | `sonarr_scripts/stop-sonarr.sh` | `/data/local/tmp/stop-sonarr.sh` | root shell, manual or from `chroot-unmount.sh` |
 | `prowlarr_scripts/start-prowlarr.sh` | `/data/local/tmp/start-prowlarr.sh` | root shell, manual |
 | `prowlarr_scripts/stop-prowlarr.sh` | `/data/local/tmp/stop-prowlarr.sh` | root shell, manual or from `chroot-unmount.sh` |
-| `sabnzbd_scripts/start-sabnzbd.sh` | `/data/local/tmp/start-sabnzbd.sh` | root shell, manual |
-| `sabnzbd_scripts/stop-sabnzbd.sh` | `/data/local/tmp/stop-sabnzbd.sh` | root shell, manual or from `chroot-unmount.sh` |
 | `ubuntu.sh` | `/data/data/com.termux/files/home/ubuntu.sh` | root shell — entry point into the container |
 
 `.env` and `poco-x3-chroot-setup.md` are gitignored (local secrets / long-form
@@ -165,24 +163,11 @@ Sonarr's root/library folder and import target live on the SSD, same as
 Jellyfin — the two now **share** that mount. Prowlarr never touches media, so
 its scripts skip the SSD step entirely.
 
-### SABnzbd: start / stop / status
-```sh
-su
-sh /data/local/tmp/start-sabnzbd.sh    # no SSD involved — downloads land in /opt/SABnzbd/downloads, on chroot-local disk
-sh /data/local/tmp/stop-sabnzbd.sh
-```
-Same reasoning as Prowlarr for skipping the SSD: SABnzbd's own working
-folders live inside the chroot's local disk, not on exFAT (see
-`torrent-privacy.md`'s exFAT-gotcha note). Sonarr does the move onto
-`/media/ssd` once a download finishes. First run: the web UI's setup wizard
-is where the Usenet server (host/port/user/pass from your provider) gets
-added.
-
 ### Start/stop by group: `media-services.sh`
 ```sh
 su
 sh /data/data/com.termux/files/home/media-services.sh jellyfin    # only Jellyfin
-sh /data/data/com.termux/files/home/media-services.sh downloads   # only Prowlarr + SABnzbd + Sonarr
+sh /data/data/com.termux/files/home/media-services.sh downloads   # only Prowlarr + Sonarr
 sh /data/data/com.termux/files/home/media-services.sh stop        # stop whatever's running, all of it
 ```
 A thin dispatcher, not a reimplementation — it just calls the `start-<x>.sh` /
@@ -296,14 +281,8 @@ scp -P 8022 -r "C:\Users\pdavi\Videos\Some.Show.S03" \
   data (indexer configs, API keys) lives entirely under `/opt/Prowlarr/data`;
   it never reads or writes media, so there's nothing to bind and nothing to
   race with the other two services over.
-- **`start-sabnzbd.sh` / `stop-sabnzbd.sh`** — also no SSD step. Starts
-  `/opt/SABnzbd/venv/bin/python3 /opt/SABnzbd/SABnzbd.py -f
-  /opt/SABnzbd/data/sabnzbd.ini -s 0.0.0.0:8080 -b 0`, PID to
-  `/run/sabnzbd.pid`. Its download folders
-  (`/opt/SABnzbd/downloads/{incomplete,complete}`) are chroot-local disk, not
-  the SSD — see `torrent-privacy.md` for why.
 - **`media-services.sh`** — dispatcher over the pairs above. `jellyfin` and
-  `downloads` (currently `prowlarr sabnzbd sonarr`) each call `start-<x>.sh
+  `downloads` (currently `prowlarr sonarr`) each call `start-<x>.sh
   --no-shell` for their group in sequence; `stop` calls every `stop-<x>.sh`
   unconditionally (safe — `stop_service` no-ops cleanly when a service isn't
   running). Adding qBittorrent later is a one-line edit to
@@ -334,28 +313,6 @@ apt install debianutils
 
 Status: net groups **done and confirmed** (`apt update` works). `policy-rc.d`
 and `debianutils` — recommended, not yet confirmed done.
-
----
-
-## Installing SABnzbd (one-time, inside the chroot)
-
-Unlike Sonarr/Prowlarr (self-contained .NET binaries — extract and run),
-SABnzbd is Python and needs a venv built on-device:
-
-```sh
-apt install python3-venv python3-pip python3-dev python3-setuptools \
-            libffi-dev libssl-dev unrar par2
-
-git clone -b master https://github.com/sabnzbd/sabnzbd.git /opt/SABnzbd
-cd /opt/SABnzbd
-
-python3 -m venv venv
-venv/bin/python3 -m pip install --upgrade pip wheel
-venv/bin/python3 -m pip install -r requirements.txt
-```
-
-Confirm `python3 --version` is 3.10+ first — SABnzbd requires it. Once this
-completes, `start-sabnzbd.sh` handles everything else (launch, PID, logs).
 
 ---
 
@@ -465,22 +422,11 @@ by which part of the setup they explain.
   `sshd` setup, `passwd`, host keys, port 8022, `authorized_keys`.
 - https://github.com/tytydraco/KTweak
 
-### Sonarr / Prowlarr / SABnzbd setup
-- **SABnzbd Wiki — Install from source** —
-  https://sabnzbd.org/wiki/installation/install-off-modules — the venv +
-  `requirements.txt` steps behind "Installing SABnzbd" above, including the
-  extra ARM64 build packages (`libffi-dev`, `libssl-dev`, etc.).
-- **SABnzbd Wiki — Command Line Parameters** —
-  https://sabnzbd.org/wiki/advanced/command-line-parameters — `-f`, `-s`,
-  `-b`, `-d` and what each does; source for the flags `start-sabnzbd.sh` uses.
+### Sonarr / Prowlarr setup
 - **Prowlarr Quick Start Guide (Servarr Wiki)** —
   https://wiki.servarr.com/prowlarr/quick-start-guide — adding an indexer,
   connecting Prowlarr to Sonarr via Settings → Apps, and why download clients
   are configured in Sonarr directly rather than synced from Prowlarr.
-- **How to Connect NZBGet or SABnzbd to Sonarr/Radarr (seedboxes.cc)** —
-  https://docs.seedboxes.cc/howtos/how-to-connect-nzbget-sabnzbd-to-sonarr-radarr/
-  — where the SABnzbd API key lives, and which fields Sonarr's download
-  client form actually needs.
 
 ### Useful sites to check out
 - **proot-distro** — https://github.com/termux/proot-distro — how the Ubuntu
@@ -504,3 +450,7 @@ by which part of the setup they explain.
 - https://www.youtube.com/watch?v=_mP5z-IBVgU
 - https://github.com/iptv-org/iptv
 - https://www.youtube.com/watch?v=G-pi8fGJU7k
+
+### Usenet useful sites
+- https://www.youtube.com/watch?v=4IGKF-K_Rgc
+- https://www.youtube.com/watch?v=ueAT8POGUWc

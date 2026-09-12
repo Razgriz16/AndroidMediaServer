@@ -19,7 +19,6 @@ SERVICES="
 $ROOT/run/jellyfin.pid:/data/local/tmp/stop-jellyfin.sh
 $ROOT/run/sonarr.pid:/data/local/tmp/stop-sonarr.sh
 $ROOT/run/prowlarr.pid:/data/local/tmp/stop-prowlarr.sh
-$ROOT/run/sabnzbd.pid:/data/local/tmp/stop-sabnzbd.sh
 "
 
 for entry in $SERVICES; do
