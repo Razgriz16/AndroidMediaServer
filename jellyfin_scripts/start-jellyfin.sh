@@ -5,8 +5,8 @@ UBUNTU=/data/data/com.termux/files/home/ubuntu.sh
 # 1. SSD
 mount_ssd || exit 1
 
-# 2. Enter and start
-exec sh $UBUNTU /bin/bash -c '
+# 2. Start — non-interactive, safe to call from a loop/orchestrator
+sh $UBUNTU /bin/bash -c '
   export DOTNET_gcServer=0
   export DOTNET_gcConcurrent=1
   export DOTNET_GCHeapHardLimitPercent=50
@@ -25,12 +25,17 @@ exec sh $UBUNTU /bin/bash -c '
   fi
 
   echo "Access it at: http://$(hostname -I 2>/dev/null | cut -d\  -f1):8096"
+'
+
+# 3. Manual use only: drop into an interactive shell with a cheatsheet.
+# Orchestrators (media-services.sh) pass --no-shell to skip this and return
+# control instead, so they can start the next service in a list.
+if [ "$1" != "--no-shell" ]; then
   echo ""
   echo "Useful commands:"
   echo "  - Check status: ps aux | grep jellyfin"
   echo "  - View logs:    tail -f /var/log/jellyfin.log"
   echo "  - Stop server:  kill \$(cat /run/jellyfin.pid)"
   echo ""
-
-  exec /bin/bash
-'
+  exec sh $UBUNTU
+fi

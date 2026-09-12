@@ -10,7 +10,8 @@ Original guides this was built from:
 - https://gist.github.com/Valienteuh/2ad0fe58c3c9ecad50425b19478ab61d
 
 Device issues unrelated to the media server itself (root, Magisk modules, ROM
-quirks) live in [`issues.md`](issues.md).
+quirks) live in [`issues.md`](issues.md). The component/storage diagrams live
+in [`architecture.md`](architecture.md).
 
 ---
 
@@ -62,6 +63,7 @@ elsewhere; deploy by copying them to the paths below.
 |---|---|---|
 | `common_scripts/ssd-env.sh` | `/data/local/tmp/ssd-env.sh` | sourced (`. /data/local/tmp/ssd-env.sh`), never run directly — shared SSD path + mount/unmount helpers for every script below that touches the SSD |
 | `common_scripts/stop-service.sh` | `/data/local/tmp/stop-service.sh` | sourced, never run directly — shared `stop_service <name> [--ssd]` used by every `stop-*.sh` below (kill-by-pidfile w/ 15s grace + force-kill, logging, optional SSD release) |
+| `common_scripts/media-services.sh` | `/data/local/tmp/media-services.sh` | root shell, manual — dispatcher: `jellyfin` / `downloads` / `stop` |
 | `chroot_scripts/chroot-mount.sh` | `/data/adb/service.d/chroot-mount.sh` | root, at boot (Magisk `service.d`) |
 | `chroot_scripts/chroot-unmount.sh` | `/data/local/tmp/chroot-unmount.sh` | root, manually or from the shutdown watcher |
 | `chroot_scripts/chroot-unmount-watch.sh` | `/data/adb/service.d/chroot-unmount-watch.sh` | root, at boot — polls for shutdown, then calls the unmount script |
@@ -152,6 +154,21 @@ sh /data/local/tmp/stop-prowlarr.sh
 Sonarr's root/library folder and import target live on the SSD, same as
 Jellyfin — the two now **share** that mount. Prowlarr never touches media, so
 its scripts skip the SSD step entirely.
+
+### Start/stop by group: `media-services.sh`
+```sh
+su
+sh /data/local/tmp/media-services.sh jellyfin    # only Jellyfin
+sh /data/local/tmp/media-services.sh downloads   # only Prowlarr + Sonarr
+sh /data/local/tmp/media-services.sh stop        # stop whatever's running, all of it
+```
+A thin dispatcher, not a reimplementation — it just calls the `start-<x>.sh` /
+`stop-<x>.sh` scripts above for whichever group you name. Every `start-<x>.sh`
+now takes an optional `--no-shell` flag (used only by this dispatcher) that
+skips the interactive drop-in shell and returns instead, so starting several
+services in a row doesn't get stuck inside the first one's shell. Run a
+`start-<x>.sh` by hand with no flag and it behaves exactly as before —
+cheatsheet, then drops you into the container.
 
 Raw start line (what the script runs), for reference:
 ```sh
@@ -256,6 +273,12 @@ scp -P 8022 -r "C:\Users\pdavi\Videos\Some.Show.S03" \
   data (indexer configs, API keys) lives entirely under `/opt/Prowlarr/data`;
   it never reads or writes media, so there's nothing to bind and nothing to
   race with the other two services over.
+- **`media-services.sh`** — dispatcher over the three pairs above. `jellyfin`
+  and `downloads` (currently `prowlarr sonarr`) each call `start-<x>.sh
+  --no-shell` for their group in sequence; `stop` calls every `stop-<x>.sh`
+  unconditionally (safe — `stop_service` no-ops cleanly when a service isn't
+  running). Adding NZBGet/qBittorrent later is a one-line edit to
+  `DOWNLOAD_SERVICES`, once their own `start`/`stop` scripts exist.
 
 ---
 
