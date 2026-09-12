@@ -26,15 +26,6 @@ sh $UBUNTU /bin/bash -c '
 # Manual use only: drop into an interactive shell with a cheatsheet.
 if [ "$1" != "--no-shell" ]; then
   echo ""
-  echo "First run: default login is admin / a temporary password — check"
-  echo "  grep -i 'temporary password' /var/log/qbittorrent.log"
-  echo "Then in the WebUI, set Downloads > incomplete to"
-  echo "  /media/ssd/downloads/torrents/incomplete"
-  echo "and the default save path to"
-  echo "  /media/ssd/downloads/torrents/seeding"
-  echo "Also worth doing now: Settings > BitTorrent > disable DHT, PeX, LSD"
-  echo "(required by most private trackers) — see torrent-privacy.md."
-  echo ""
   echo "Useful commands:"
   echo "  - Check status: ps aux | grep qbittorrent-nox"
   echo "  - View logs:    tail -f /var/log/qbittorrent.log"

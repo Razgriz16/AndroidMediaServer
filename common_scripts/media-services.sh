@@ -22,6 +22,7 @@ start_group() {
   for name in "$@"; do
     echo "== $name =="
     sh "$TMP/start-$name.sh" --no-shell
+    echo "  log: /var/log/$name.log (inside chroot — tail -f it from ubuntu.sh)"
     echo ""
   done
 }
