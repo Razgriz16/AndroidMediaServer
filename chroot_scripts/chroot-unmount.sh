@@ -17,6 +17,8 @@ log "start"
 # Add more services here as needed: pidfile:stopscript
 SERVICES="
 $ROOT/run/jellyfin.pid:/data/local/tmp/stop-jellyfin.sh
+$ROOT/run/sonarr.pid:/data/local/tmp/stop-sonarr.sh
+$ROOT/run/prowlarr.pid:/data/local/tmp/stop-prowlarr.sh
 "
 
 for entry in $SERVICES; do

@@ -1,9 +1,9 @@
 #!/system/bin/sh
-# /data/local/tmp/stop-jellyfin.sh
+# /data/local/tmp/stop-sonarr.sh
 ROOT=/data/data/com.termux/files/usr/var/lib/proot-distro/containers/ubuntu/rootfs
-PIDF=$ROOT/run/jellyfin.pid
+PIDF=$ROOT/run/sonarr.pid
 LOG=/data/local/tmp/ubuntu-boot.log
-TAG=stop-jellyfin
+TAG=stop-sonarr
 
 log() {
   echo "$(date '+%Y-%m-%d %H:%M:%S') [$TAG] $*" >> "$LOG"
@@ -15,11 +15,11 @@ exec >> "$LOG" 2>&1
 log "start"
 
 if [ ! -f "$PIDF" ]; then
-  log "Jellyfin: no PID file — not running (or already stopped)"
+  log "Sonarr: no PID file — not running (or already stopped)"
 else
   PID=$(cat "$PIDF")
   if ! kill -0 "$PID" 2>/dev/null; then
-    log "Jellyfin: PID file present but process $PID is dead — cleaning up"
+    log "Sonarr: PID file present but process $PID is dead — cleaning up"
     rm -f "$PIDF"
   else
     kill "$PID" 2>/dev/null
@@ -28,17 +28,17 @@ else
       sleep 1; i=$((i+1))
     done
     if kill -0 "$PID" 2>/dev/null; then
-      log "Jellyfin: PID $PID did not exit after 15s — force killing"
+      log "Sonarr: PID $PID did not exit after 15s — force killing"
       kill -9 "$PID" 2>/dev/null
       sleep 1
     fi
     rm -f "$PIDF"
-    log "Jellyfin: stopped"
+    log "Sonarr: stopped"
   fi
 fi
 
-# SSD is shared with Sonarr — only unmount once nothing else still needs it.
-OTHER_SSD_USERS="$ROOT/run/sonarr.pid"
+# SSD is shared with Jellyfin — only unmount once nothing else still needs it.
+OTHER_SSD_USERS="$ROOT/run/jellyfin.pid"
 still_needed=0
 for pidfile in $OTHER_SSD_USERS; do
   [ -f "$pidfile" ] && kill -0 "$(cat "$pidfile" 2>/dev/null)" 2>/dev/null && still_needed=1

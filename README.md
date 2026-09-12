@@ -65,6 +65,10 @@ elsewhere; deploy by copying them to the paths below.
 | `chroot_scripts/chroot-unmount-watch.sh` | `/data/adb/service.d/chroot-unmount-watch.sh` | root, at boot — polls for shutdown, then calls the unmount script |
 | `jellyfin_scripts/start-jellyfin.sh` | `/data/local/tmp/start-jellyfin.sh` | root shell, manual |
 | `jellyfin_scripts/stop-jellyfin.sh` | `/data/local/tmp/stop-jellyfin.sh` | root shell, manual or from `chroot-unmount.sh` |
+| `sonarr_scripts/start-sonarr.sh` | `/data/local/tmp/start-sonarr.sh` | root shell, manual |
+| `sonarr_scripts/stop-sonarr.sh` | `/data/local/tmp/stop-sonarr.sh` | root shell, manual or from `chroot-unmount.sh` |
+| `prowlarr_scripts/start-prowlarr.sh` | `/data/local/tmp/start-prowlarr.sh` | root shell, manual |
+| `prowlarr_scripts/stop-prowlarr.sh` | `/data/local/tmp/stop-prowlarr.sh` | root shell, manual or from `chroot-unmount.sh` |
 | `ubuntu.sh` | `/data/data/com.termux/files/home/ubuntu.sh` | root shell — entry point into the container |
 
 `.env` and `poco-x3-chroot-setup.md` are gitignored (local secrets / long-form
@@ -117,6 +121,19 @@ ps aux | grep jellyfin           # is it running
 tail -f /var/log/jellyfin.log    # live app log
 kill $(cat /run/jellyfin.pid)    # stop it
 ```
+
+### Sonarr / Prowlarr: start / stop / status
+```sh
+su
+sh /data/local/tmp/start-sonarr.sh     # binds SSD if needed (shared with Jellyfin), enters chroot, starts Sonarr
+sh /data/local/tmp/stop-sonarr.sh      # kills Sonarr, unmounts SSD only if Jellyfin isn't also using it
+
+sh /data/local/tmp/start-prowlarr.sh   # no SSD involved — Prowlarr only holds indexer configs
+sh /data/local/tmp/stop-prowlarr.sh
+```
+Sonarr's root/library folder and import target live on the SSD, same as
+Jellyfin — the two now **share** that mount. Prowlarr never touches media, so
+its scripts skip the SSD step entirely.
 
 Raw start line (what the script runs), for reference:
 ```sh
@@ -205,8 +222,20 @@ scp -P 8022 -r "C:\Users\pdavi\Videos\Some.Show.S03" \
   writes the PID to `/run/jellyfin.pid`, sets `oom_score_adj` to `-1000`, prints
   the access URL + a cheatsheet, and drops into an interactive bash.
 - **`stop-jellyfin.sh`** — `TERM` the PID, wait 15 s, `KILL -9` if still alive,
-  remove the PID file, then unmount the SSD (with `fuser -m` logged if the
-  unmount fails). Safe to run when nothing's running — every branch reports.
+  remove the PID file, then unmount the SSD **only if Sonarr's PID file also
+  shows nothing alive** (with `fuser -m` logged if the unmount fails). Safe to
+  run when nothing's running — every branch reports.
+- **`start-sonarr.sh` / `stop-sonarr.sh`** — same shape as the Jellyfin pair:
+  bind the SSD if not already mounted, `exec` into `ubuntu.sh`, start
+  `/opt/Sonarr/Sonarr -nobrowser -data=/opt/Sonarr/data`, PID to
+  `/run/sonarr.pid`. Stop mirrors Jellyfin's TERM→wait→KILL, and — since the
+  SSD is now a **shared** mount — only unmounts it if `jellyfin.pid` also
+  shows nothing alive. Whichever of the two stops last is the one that
+  actually unmounts.
+- **`start-prowlarr.sh` / `stop-prowlarr.sh`** — no SSD step at all. Prowlarr's
+  data (indexer configs, API keys) lives entirely under `/opt/Prowlarr/data`;
+  it never reads or writes media, so there's nothing to bind and nothing to
+  race with the other two services over.
 
 ---
 
