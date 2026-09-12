@@ -63,7 +63,9 @@ deploy_group() {
       fi
     else
       mkdir -p "$destdir"
-      cp "$src" "$dst" && echo "deployed: $dst"
+      # chmod explicitly rather than relying on cp + umask to carry over the
+      # executable bit from the repo
+      cp "$src" "$dst" && chmod 755 "$dst" && echo "deployed: $dst"
     fi
   done
 }

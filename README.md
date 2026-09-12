@@ -63,7 +63,7 @@ elsewhere; deploy by copying them to the paths below.
 |---|---|---|
 | `common_scripts/ssd-env.sh` | `/data/local/tmp/ssd-env.sh` | sourced (`. /data/local/tmp/ssd-env.sh`), never run directly — shared SSD path + mount/unmount helpers for every script below that touches the SSD |
 | `common_scripts/stop-service.sh` | `/data/local/tmp/stop-service.sh` | sourced, never run directly — shared `stop_service <name> [--ssd]` used by every `stop-*.sh` below (kill-by-pidfile w/ 15s grace + force-kill, logging, optional SSD release) |
-| `common_scripts/media-services.sh` | `/data/local/tmp/media-services.sh` | root shell, manual — dispatcher: `jellyfin` / `downloads` / `stop` |
+| `common_scripts/media-services.sh` | `/data/data/com.termux/files/home/media-services.sh` | root shell, manual — dispatcher: `jellyfin` / `downloads` / `stop` |
 | `chroot_scripts/chroot-mount.sh` | `/data/adb/service.d/chroot-mount.sh` | root, at boot (Magisk `service.d`) |
 | `chroot_scripts/chroot-unmount.sh` | `/data/local/tmp/chroot-unmount.sh` | root, manually or from the shutdown watcher |
 | `chroot_scripts/chroot-unmount-watch.sh` | `/data/adb/service.d/chroot-unmount-watch.sh` | root, at boot — polls for shutdown, then calls the unmount script |
@@ -93,6 +93,14 @@ sh deploy.sh
 
 `chroot-mount.sh`/`chroot-unmount-watch.sh` (Magisk `service.d`) only take
 effect next boot; everything else immediately.
+
+`deploy.sh` explicitly `chmod 755`s everything it copies, rather than relying
+on `cp` + umask to carry the bit over from the repo. This matters for real:
+Magisk **silently skips** any `service.d`/`post-fs-data.d` script that isn't
+already executable — no error, no log line, it just never runs. Every other
+script here is invoked as `sh script.sh`, so the executable bit is a no-op
+for those (harmless either way), but it's load-bearing for the two under
+`service.d`.
 
 ---
 
@@ -158,9 +166,9 @@ its scripts skip the SSD step entirely.
 ### Start/stop by group: `media-services.sh`
 ```sh
 su
-sh /data/local/tmp/media-services.sh jellyfin    # only Jellyfin
-sh /data/local/tmp/media-services.sh downloads   # only Prowlarr + Sonarr
-sh /data/local/tmp/media-services.sh stop        # stop whatever's running, all of it
+sh /data/data/com.termux/files/home/media-services.sh jellyfin    # only Jellyfin
+sh /data/data/com.termux/files/home/media-services.sh downloads   # only Prowlarr + Sonarr
+sh /data/data/com.termux/files/home/media-services.sh stop        # stop whatever's running, all of it
 ```
 A thin dispatcher, not a reimplementation — it just calls the `start-<x>.sh` /
 `stop-<x>.sh` scripts above for whichever group you name. Every `start-<x>.sh`
