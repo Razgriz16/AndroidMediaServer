@@ -73,6 +73,8 @@ elsewhere; deploy by copying them to the paths below.
 | `sonarr_scripts/stop-sonarr.sh` | `/data/local/tmp/stop-sonarr.sh` | root shell, manual or from `chroot-unmount.sh` |
 | `prowlarr_scripts/start-prowlarr.sh` | `/data/local/tmp/start-prowlarr.sh` | root shell, manual |
 | `prowlarr_scripts/stop-prowlarr.sh` | `/data/local/tmp/stop-prowlarr.sh` | root shell, manual or from `chroot-unmount.sh` |
+| `qbittorrent_scripts/start-qbittorrent.sh` | `/data/local/tmp/start-qbittorrent.sh` | root shell, manual |
+| `qbittorrent_scripts/stop-qbittorrent.sh` | `/data/local/tmp/stop-qbittorrent.sh` | root shell, manual or from `chroot-unmount.sh` |
 | `ubuntu.sh` | `/data/data/com.termux/files/home/ubuntu.sh` | root shell — entry point into the container |
 
 `.env` and `poco-x3-chroot-setup.md` are gitignored (local secrets / long-form
@@ -163,11 +165,28 @@ Sonarr's root/library folder and import target live on the SSD, same as
 Jellyfin — the two now **share** that mount. Prowlarr never touches media, so
 its scripts skip the SSD step entirely.
 
+### qBittorrent: install / start / stop
+Installed via apt (no source build, unlike SABnzbd):
+```sh
+apt install qbittorrent-nox
+```
+Start/stop:
+```sh
+su
+sh /data/local/tmp/start-qbittorrent.sh   # binds SSD if needed, starts qbittorrent-nox on :8080
+sh /data/local/tmp/stop-qbittorrent.sh
+```
+Downloads live on the SSD (`/media/ssd/downloads/torrents/{incomplete,seeding}`)
+for the same reason SABnzbd's did — see `architecture.md`. First run: check
+`/var/log/qbittorrent.log` for the temporary WebUI password, and disable
+DHT/PeX/LSD under Settings > BitTorrent (required by most private trackers —
+see `torrent-privacy.md`).
+
 ### Start/stop by group: `media-services.sh`
 ```sh
 su
 sh /data/data/com.termux/files/home/media-services.sh jellyfin    # only Jellyfin
-sh /data/data/com.termux/files/home/media-services.sh downloads   # only Prowlarr + Sonarr
+sh /data/data/com.termux/files/home/media-services.sh downloads   # only Prowlarr + qBittorrent + Sonarr
 sh /data/data/com.termux/files/home/media-services.sh stop        # stop whatever's running, all of it
 ```
 A thin dispatcher, not a reimplementation — it just calls the `start-<x>.sh` /
@@ -280,13 +299,18 @@ scp -P 8022 -r "C:\Users\pdavi\Videos\Some.Show.S03" \
 - **`start-prowlarr.sh` / `stop-prowlarr.sh`** — no SSD step at all. Prowlarr's
   data (indexer configs, API keys) lives entirely under `/opt/Prowlarr/data`;
   it never reads or writes media, so there's nothing to bind and nothing to
-  race with the other two services over.
+  race with the other services over.
+- **`start-qbittorrent.sh` / `stop-qbittorrent.sh`** — binds the SSD if not
+  already mounted (fourth consumer — `unmount_ssd`'s generic pidfile scan
+  needed no changes), starts `qbittorrent-nox --profile=/opt/qBittorrent/data
+  --webui-port=8080`, PID to `/run/qbittorrent.pid`. Downloads live on the
+  SSD (`/media/ssd/downloads/torrents/{incomplete,seeding}`), same tradeoff
+  SABnzbd's did — see `architecture.md`.
 - **`media-services.sh`** — dispatcher over the pairs above. `jellyfin` and
-  `downloads` (currently `prowlarr sonarr`) each call `start-<x>.sh
-  --no-shell` for their group in sequence; `stop` calls every `stop-<x>.sh`
-  unconditionally (safe — `stop_service` no-ops cleanly when a service isn't
-  running). Adding qBittorrent later is a one-line edit to
-  `DOWNLOAD_SERVICES`, once it has its own `start`/`stop` scripts.
+  `downloads` (currently `prowlarr qbittorrent sonarr`) each call
+  `start-<x>.sh --no-shell` for their group in sequence; `stop` calls every
+  `stop-<x>.sh` unconditionally (safe — `stop_service` no-ops cleanly when a
+  service isn't running).
 
 ---
 
@@ -398,7 +422,8 @@ apt / startup expected ~2–5×; streaming throughput was already near-native.
 
 ## Roadmap
 
-1. Prowlarr, Sonarr, qBittorrent.
+1. ~~Prowlarr, Sonarr, qBittorrent.~~ Done (Usenet/SABnzbd was tried first and
+   removed).
 2. Firewall hardening — known blocklists.
 3. Jellyseerr, integrated with the above.
 
