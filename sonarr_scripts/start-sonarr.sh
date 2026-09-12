@@ -31,7 +31,7 @@ if [ "$1" != "--no-shell" ]; then
   echo "Useful commands:"
   echo "  - Check status: ps aux | grep Sonarr"
   echo "  - View logs:    tail -f /var/log/sonarr.log"
-  echo "  - Stop server:  kill \$(cat /run/sonarr.pid)"
+  echo "  - Stop server:  sh /data/local/tmp/stop-sonarr.sh  (or: kill \$(cat /run/sonarr.pid))"
   echo ""
   exec sh $UBUNTU
 fi

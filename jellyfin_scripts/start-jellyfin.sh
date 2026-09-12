@@ -35,7 +35,7 @@ if [ "$1" != "--no-shell" ]; then
   echo "Useful commands:"
   echo "  - Check status: ps aux | grep jellyfin"
   echo "  - View logs:    tail -f /var/log/jellyfin.log"
-  echo "  - Stop server:  kill \$(cat /run/jellyfin.pid)"
+  echo "  - Stop server:  sh /data/local/tmp/stop-jellyfin.sh  (or: kill \$(cat /run/jellyfin.pid))"
   echo ""
   exec sh $UBUNTU
 fi
