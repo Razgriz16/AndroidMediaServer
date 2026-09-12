@@ -73,12 +73,24 @@ elsewhere; deploy by copying them to the paths below.
 | `prowlarr_scripts/stop-prowlarr.sh` | `/data/local/tmp/stop-prowlarr.sh` | root shell, manual or from `chroot-unmount.sh` |
 | `ubuntu.sh` | `/data/data/com.termux/files/home/ubuntu.sh` | root shell — entry point into the container |
 
-Deploy `ssd-env.sh` and `stop-service.sh` before (or alongside) the other
-scripts — every `start-*.sh`/`stop-*.sh` script `source`s one or both and will
-error out with "No such file" if they're missing.
-
 `.env` and `poco-x3-chroot-setup.md` are gitignored (local secrets / long-form
 migration notes).
+
+---
+
+## Deploying updates
+
+The phone has its own clone; `deploy.sh` copies each file to its path above.
+
+```sh
+cd ~/AndroidMediaServer && git pull
+su
+sh deploy.sh --dry-run   # optional: preview what's new/changed
+sh deploy.sh
+```
+
+`chroot-mount.sh`/`chroot-unmount-watch.sh` (Magisk `service.d`) only take
+effect next boot; everything else immediately.
 
 ---
 
