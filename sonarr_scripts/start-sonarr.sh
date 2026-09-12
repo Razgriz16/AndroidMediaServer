@@ -1,19 +1,11 @@
 #!/system/bin/sh
 # /data/local/tmp/start-sonarr.sh
-ROOT=/data/data/com.termux/files/usr/var/lib/proot-distro/containers/ubuntu/rootfs
-SRC=/mnt/media_rw/FABF-AE53
+. /data/local/tmp/ssd-env.sh
 UBUNTU=/data/data/com.termux/files/home/ubuntu.sh
 
-# 1. SSD — shared with Jellyfin; mount is idempotent (mnt-style check), safe
-# to call whichever service starts first.
-if grep -q " $ROOT/media/ssd " /proc/mounts; then
-  echo "SSD already mounted"
-else
-  [ -d "$SRC" ] || { echo "SSD not present at $SRC"; exit 1; }
-  mkdir -p $ROOT/media/ssd
-  mount --bind $SRC $ROOT/media/ssd || { echo "SSD bind failed"; exit 1; }
-  echo "SSD mounted at /media/ssd"
-fi
+# 1. SSD — shared with Jellyfin; mount is idempotent, safe to call whichever
+# service starts first.
+mount_ssd || exit 1
 
 # 2. Enter and start
 exec sh $UBUNTU /bin/bash -c '

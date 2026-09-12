@@ -38,7 +38,7 @@ here. Same rootfs directory, pick one entry mechanism at a time.
 | Boot / teardown log | `/data/local/tmp/ubuntu-boot.log` |
 | Jellyfin app log | `/var/log/jellyfin.log` inside the chroot (`$ROOT/var/log/jellyfin.log` from the host) |
 | Jellyfin PID file | `/run/jellyfin.pid` inside (tmpfs — cleared every boot, so no stale PID) |
-| SSD source (host) | `/mnt/media_rw/FABF-AE53` |
+| SSD source (host) | `/mnt/media_rw/FABF-AE53` — defined once in `common_scripts/ssd-env.sh` (`/data/local/tmp/ssd-env.sh` on device), sourced by every script that binds it |
 | SSD inside container | `/media/ssd` — bind mount, must be **exactly** `$ROOT/media/ssd` |
 | Jellyfin web UI | `http://<phone-ip>:8096` |
 | SSH | port `8022`, Termux user `u0_a193` (e.g. `192.168.1.198`) |
@@ -60,6 +60,8 @@ elsewhere; deploy by copying them to the paths below.
 
 | Repo file | Deployed to | Runs as / when |
 |---|---|---|
+| `common_scripts/ssd-env.sh` | `/data/local/tmp/ssd-env.sh` | sourced (`. /data/local/tmp/ssd-env.sh`), never run directly — shared SSD path + mount/unmount helpers for every script below that touches the SSD |
+| `common_scripts/stop-service.sh` | `/data/local/tmp/stop-service.sh` | sourced, never run directly — shared `stop_service <name> [--ssd]` used by every `stop-*.sh` below (kill-by-pidfile w/ 15s grace + force-kill, logging, optional SSD release) |
 | `chroot_scripts/chroot-mount.sh` | `/data/adb/service.d/chroot-mount.sh` | root, at boot (Magisk `service.d`) |
 | `chroot_scripts/chroot-unmount.sh` | `/data/local/tmp/chroot-unmount.sh` | root, manually or from the shutdown watcher |
 | `chroot_scripts/chroot-unmount-watch.sh` | `/data/adb/service.d/chroot-unmount-watch.sh` | root, at boot — polls for shutdown, then calls the unmount script |
@@ -70,6 +72,10 @@ elsewhere; deploy by copying them to the paths below.
 | `prowlarr_scripts/start-prowlarr.sh` | `/data/local/tmp/start-prowlarr.sh` | root shell, manual |
 | `prowlarr_scripts/stop-prowlarr.sh` | `/data/local/tmp/stop-prowlarr.sh` | root shell, manual or from `chroot-unmount.sh` |
 | `ubuntu.sh` | `/data/data/com.termux/files/home/ubuntu.sh` | root shell — entry point into the container |
+
+Deploy `ssd-env.sh` and `stop-service.sh` before (or alongside) the other
+scripts — every `start-*.sh`/`stop-*.sh` script `source`s one or both and will
+error out with "No such file" if they're missing.
 
 `.env` and `poco-x3-chroot-setup.md` are gitignored (local secrets / long-form
 migration notes).
@@ -144,19 +150,21 @@ nohup jellyfin --webdir=/usr/share/jellyfin/web \
 
 ### Logs
 ```sh
-tail -f /data/local/tmp/ubuntu-boot.log        # mount / unmount / stop-jellyfin (all of them log here)
+tail -f /data/local/tmp/ubuntu-boot.log        # mount / unmount / stop-* (all of them log here)
 grep -i jellyfin /data/local/tmp/ubuntu-boot.log
 ```
-All three lifecycle scripts (`chroot-mount`, `chroot-unmount`, `stop-jellyfin`)
-send **every** line — their own messages plus stray command output — to
-`ubuntu-boot.log` via a `log()` helper + `exec >> "$LOG" 2>&1`. Nothing prints to
-the console. One file so a graceful shutdown reads as a single timeline.
-Jellyfin's own application log is separate: `/var/log/jellyfin.log` inside.
+`chroot-mount`, `chroot-unmount`, and every `stop-*.sh` (via the shared
+`stop_service` in `common_scripts/stop-service.sh`) send **every** line —
+their own messages plus stray command output — to `ubuntu-boot.log` via a
+`log()` helper + `exec >> "$LOG" 2>&1`. Nothing prints to the console. One
+file so a graceful shutdown reads as a single timeline. Jellyfin's own
+application log is separate: `/var/log/jellyfin.log` inside.
 
 
 Line format is `YYYY-MM-DD HH:MM:SS [tag] message`, where `tag` is the script the
-line came from (`chroot-mount`, `chroot-unmount`, `stop-jellyfin`) — so a failure
-is traceable to its source and `grep '\[tag\]'` isolates one script:
+line came from (`chroot-mount`, `chroot-unmount`, `stop-jellyfin`, `stop-sonarr`,
+`stop-prowlarr`) — so a failure is traceable to its source and `grep '\[tag\]'`
+isolates one script:
 ```
 2026-09-09 14:03:11 [chroot-mount] start
 2026-09-09 14:03:11 [chroot-mount] env mounted
