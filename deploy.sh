@@ -30,6 +30,7 @@ chroot_scripts/chroot-unmount-watch.sh
 
 TO_TERMUX_HOME="
 ubuntu.sh
+common_scripts/media-services.sh
 "
 
 REPO_DIR=$(cd "$(dirname "$0")" && pwd)
