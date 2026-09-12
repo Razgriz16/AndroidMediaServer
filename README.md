@@ -9,6 +9,9 @@ Original guides this was built from:
 - https://github.com/Boss17536/android-media-server
 - https://gist.github.com/Valienteuh/2ad0fe58c3c9ecad50425b19478ab61d
 
+Device issues unrelated to the media server itself (root, Magisk modules, ROM
+quirks) live in [`issues.md`](issues.md).
+
 ---
 
 ## The setup at a glance
