@@ -15,9 +15,9 @@
 TMP=/data/local/tmp
 
 JELLYFIN_SERVICES="jellyfin"
-# Add nzbget/qbittorrent here once their start/stop-<name>.sh scripts exist —
+# Add qbittorrent here once it has its own start/stop-<name>.sh scripts —
 # nothing else in this file needs to change.
-DOWNLOAD_SERVICES="prowlarr sonarr"
+DOWNLOAD_SERVICES="prowlarr sabnzbd sonarr"
 ALL_SERVICES="$JELLYFIN_SERVICES $DOWNLOAD_SERVICES"
 
 start_group() {
