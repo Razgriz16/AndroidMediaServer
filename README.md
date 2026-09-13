@@ -13,6 +13,10 @@ Device issues unrelated to the media server itself (root, Magisk modules, ROM
 quirks) live in [`issues.md`](issues.md). The component/storage diagrams live
 in [`architecture.md`](architecture.md).
 
+**Project status:** media server works; automated acquisition hit a
+hardware ceiling on this device and was stopped there — see
+[`postmortem.md`](postmortem.md) for the verdict and decision trail.
+
 ---
 
 ## The setup at a glance
@@ -77,8 +81,8 @@ elsewhere; deploy by copying them to the paths below.
 | `qbittorrent_scripts/stop-qbittorrent.sh` | `/data/local/tmp/stop-qbittorrent.sh` | root shell, manual or from `chroot-unmount.sh` |
 | `ubuntu.sh` | `/data/data/com.termux/files/home/ubuntu.sh` | root shell — entry point into the container |
 
-`.env` and `poco-x3-chroot-setup.md` are gitignored (local secrets / long-form
-migration notes).
+`.env`, `poco-x3-chroot-setup.md`, and `media-download-systems.md` are
+gitignored (local secrets / long-form notes).
 
 ---
 
@@ -179,8 +183,7 @@ sh /data/local/tmp/stop-qbittorrent.sh
 Downloads live on the SSD (`/media/ssd/downloads/torrents/{incomplete,seeding}`)
 for the same reason SABnzbd's did — see `architecture.md`. First run: check
 `/var/log/qbittorrent.log` for the temporary WebUI password, and disable
-DHT/PeX/LSD under Settings > BitTorrent (required by most private trackers —
-see `torrent-privacy.md`).
+DHT/PeX/LSD under Settings > BitTorrent (reduces exposure on public swarms).
 
 ### Start/stop by group: `media-services.sh`
 ```sh
@@ -242,7 +245,7 @@ mount | grep ' /data ' | grep nosuid     # is /data still nosuid/nodev
 ### Copy media from the PC
 ```sh
 # scp port flag is capital -P (lowercase -p means "preserve timestamps")
-scp -P 8022 -r "C:\Users\pdavi\Videos\Some.Show.S03" \
+scp -P 8022 -r "C:\Users\{user.name}\Videos\Some.Show.S03" \
     u0_a201@192.168.1.198:/mnt/media_rw/FABF-AE53/media/tv
 ```
 
@@ -420,12 +423,15 @@ apt / startup expected ~2–5×; streaming throughput was already near-native.
 
 ---
 
-## Roadmap
+## Roadmap (frozen — see `postmortem.md`)
 
 1. ~~Prowlarr, Sonarr, qBittorrent.~~ Done (Usenet/SABnzbd was tried first and
    removed).
-2. Firewall hardening — known blocklists.
-3. Jellyseerr, integrated with the above.
+2. ~~Firewall hardening — known blocklists.~~ Not reached.
+3. ~~Jellyseerr, integrated with the above.~~ Not reached.
+
+Project declared failed before items 2–3 — root cause was a hardware I/O
+ceiling on this phone, not something further roadmap work would have fixed.
 
 ---
 
