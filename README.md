@@ -67,7 +67,7 @@ elsewhere; deploy by copying them to the paths below.
 |---|---|---|
 | `common_scripts/ssd-env.sh` | `/data/local/tmp/ssd-env.sh` | sourced (`. /data/local/tmp/ssd-env.sh`), never run directly — shared SSD path + mount/unmount helpers for every script below that touches the SSD |
 | `common_scripts/stop-service.sh` | `/data/local/tmp/stop-service.sh` | sourced, never run directly — shared `stop_service <name> [--ssd]` used by every `stop-*.sh` below (kill-by-pidfile w/ 15s grace + force-kill, logging, optional SSD release) |
-| `common_scripts/media-services.sh` | `/data/data/com.termux/files/home/media-services.sh` | root shell, manual — dispatcher: `jellyfin` / `downloads` / `stop` |
+| `common_scripts/media-services.sh` | `/data/data/com.termux/files/home/media-services.sh` | root shell, manual — dispatcher: `{start\|stop\|restart} {all\|jellyfin\|downloads\|<service>...}` |
 | `chroot_scripts/chroot-mount.sh` | `/data/adb/service.d/chroot-mount.sh` | root, at boot (Magisk `service.d`) |
 | `chroot_scripts/chroot-unmount.sh` | `/data/local/tmp/chroot-unmount.sh` | root, manually or from the shutdown watcher |
 | `chroot_scripts/chroot-unmount-watch.sh` | `/data/adb/service.d/chroot-unmount-watch.sh` | root, at boot — polls for shutdown, then calls the unmount script |
@@ -188,17 +188,26 @@ DHT/PeX/LSD under Settings > BitTorrent (reduces exposure on public swarms).
 ### Start/stop by group: `media-services.sh`
 ```sh
 su
-sh /data/data/com.termux/files/home/media-services.sh jellyfin    # only Jellyfin
-sh /data/data/com.termux/files/home/media-services.sh downloads   # only Prowlarr + qBittorrent + Sonarr
-sh /data/data/com.termux/files/home/media-services.sh stop        # stop whatever's running, all of it
+sh /data/data/com.termux/files/home/media-services.sh start all           # everything
+sh /data/data/com.termux/files/home/media-services.sh start jellyfin      # only Jellyfin
+sh /data/data/com.termux/files/home/media-services.sh start downloads     # only Prowlarr + qBittorrent + Sonarr
+sh /data/data/com.termux/files/home/media-services.sh start sonarr qbittorrent  # any specific service(s)
+sh /data/data/com.termux/files/home/media-services.sh stop all            # stop whatever's running, all of it
+sh /data/data/com.termux/files/home/media-services.sh stop jellyfin       # stop just one group/service
+sh /data/data/com.termux/files/home/media-services.sh restart downloads   # stop then start a group
 ```
 A thin dispatcher, not a reimplementation — it just calls the `start-<x>.sh` /
-`stop-<x>.sh` scripts above for whichever group you name. Every `start-<x>.sh`
-now takes an optional `--no-shell` flag (used only by this dispatcher) that
-skips the interactive drop-in shell and returns instead, so starting several
-services in a row doesn't get stuck inside the first one's shell. Run a
-`start-<x>.sh` by hand with no flag and it behaves exactly as before —
-cheatsheet, then drops you into the container.
+`stop-<x>.sh` scripts above for whichever service(s) or group you name.
+`all`, `jellyfin`, and `downloads` are the built-in groups; any individual
+service name works too, and multiple names/groups can be combined in one
+call. Adding a new service later is a two-line change in `media-services.sh`
+(add it to `ALL_SERVICES`, add it to a group if it belongs to one) — no
+changes needed anywhere else. Every `start-<x>.sh` takes an optional
+`--no-shell` flag (used only by this dispatcher) that skips the interactive
+drop-in shell and returns instead, so starting several services in a row
+doesn't get stuck inside the first one's shell. Run a `start-<x>.sh` by hand
+with no flag and it behaves exactly as before — cheatsheet, then drops you
+into the container.
 
 Raw start line (what the script runs), for reference:
 ```sh
@@ -309,11 +318,13 @@ scp -P 8022 -r "C:\Users\{user.name}\Videos\Some.Show.S03" \
   --webui-port=8080`, PID to `/run/qbittorrent.pid`. Downloads live on the
   SSD (`/media/ssd/downloads/torrents/{incomplete,seeding}`), same tradeoff
   SABnzbd's did — see `architecture.md`.
-- **`media-services.sh`** — dispatcher over the pairs above. `jellyfin` and
-  `downloads` (currently `prowlarr qbittorrent sonarr`) each call
-  `start-<x>.sh --no-shell` for their group in sequence; `stop` calls every
-  `stop-<x>.sh` unconditionally (safe — `stop_service` no-ops cleanly when a
-  service isn't running).
+- **`media-services.sh`** — dispatcher over the pairs above, called as
+  `{start|stop|restart} {all|jellyfin|downloads|<service>...}`. Targets
+  resolve through a small service registry (`ALL_SERVICES` + `GROUP_*`
+  lists), so `all`, a named group, and individual service names can all be
+  mixed in one call; `start`/`restart` run `start-<x>.sh --no-shell` for each
+  resolved service, `stop`/`restart` run `stop-<x>.sh` unconditionally (safe
+  — `stop_service` no-ops cleanly when a service isn't running).
 
 ---
 
