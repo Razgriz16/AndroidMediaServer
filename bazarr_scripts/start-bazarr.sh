@@ -14,8 +14,8 @@ sh $UBUNTU /bin/bash -c '
     echo "Bazarr already running with PID $(cat /run/bazarr.pid)"
   else
     echo "Starting Bazarr..."
-    mkdir -p /opt/Bazarr/data
-    nohup python3 /opt/Bazarr/bazarr.py --no-update --config=/opt/Bazarr/data \
+    mkdir -p /opt/bazarr/data
+    nohup python3 /opt/bazarr/bazarr.py --no-update --config=/opt/bazarr/data \
                    >> /var/log/bazarr.log 2>&1 &
     echo $! > /run/bazarr.pid
     echo "Bazarr started with PID $(cat /run/bazarr.pid)"
