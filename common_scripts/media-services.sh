@@ -24,11 +24,11 @@ TMP=/data/local/tmp
 
 # --- Service registry ---------------------------------------------------
 # Every service the dispatcher knows about. Add new services here.
-ALL_SERVICES="jellyfin prowlarr qbittorrent sonarr"
+ALL_SERVICES="jellyfin prowlarr qbittorrent sonarr bazarr"
 
 # --- Groups ---------------------------------------------------------------
 GROUP_JELLYFIN="jellyfin"
-GROUP_DOWNLOADS="prowlarr qbittorrent sonarr"
+GROUP_DOWNLOADS="prowlarr qbittorrent sonarr bazarr"
 
 # Resolve a single token ("all", a group name, or a lone service name) to
 # a space-separated list of service names. Prints nothing and returns

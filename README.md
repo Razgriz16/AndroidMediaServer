@@ -46,6 +46,7 @@ here. Same rootfs directory, pick one entry mechanism at a time.
 | SSD source (host) | `/mnt/media_rw/FABF-AE53` — defined once in `common_scripts/ssd-env.sh` (`/data/local/tmp/ssd-env.sh` on device), sourced by every script that binds it |
 | SSD inside container | `/media/ssd` — bind mount, must be **exactly** `$ROOT/media/ssd` |
 | Jellyfin web UI | `http://<phone-ip>:8096` |
+| Bazarr web UI | `http://<phone-ip>:6767` |
 | SSH | port `8022`, Termux user `u0_a193` (e.g. `192.168.1.198`) |
 
 > The rootfs path shows up in `mount` output under three aliases at once
@@ -164,10 +165,14 @@ sh /data/local/tmp/stop-sonarr.sh      # kills Sonarr, unmounts SSD only if Jell
 
 sh /data/local/tmp/start-prowlarr.sh   # no SSD involved — Prowlarr only holds indexer configs
 sh /data/local/tmp/stop-prowlarr.sh
+
+sh /data/local/tmp/start-bazarr.sh     # binds SSD if needed (shared with Jellyfin/Sonarr), enters chroot, starts Bazarr
+sh /data/local/tmp/stop-bazarr.sh      # kills Bazarr, unmounts SSD only if no other SSD consumer is still up
 ```
 Sonarr's root/library folder and import target live on the SSD, same as
 Jellyfin — the two now **share** that mount. Prowlarr never touches media, so
-its scripts skip the SSD step entirely.
+its scripts skip the SSD step entirely. Bazarr writes subtitle files next to
+the media it matches, so it joins the SSD-sharing group too.
 
 ### qBittorrent: install / start / stop
 Installed via apt (no source build, unlike SABnzbd):
@@ -190,7 +195,7 @@ DHT/PeX/LSD under Settings > BitTorrent (reduces exposure on public swarms).
 su
 sh /data/data/com.termux/files/home/media-services.sh start all           # everything
 sh /data/data/com.termux/files/home/media-services.sh start jellyfin      # only Jellyfin
-sh /data/data/com.termux/files/home/media-services.sh start downloads     # only Prowlarr + qBittorrent + Sonarr
+sh /data/data/com.termux/files/home/media-services.sh start downloads     # only Prowlarr + qBittorrent + Sonarr + Bazarr
 sh /data/data/com.termux/files/home/media-services.sh start sonarr qbittorrent  # any specific service(s)
 sh /data/data/com.termux/files/home/media-services.sh stop all            # stop whatever's running, all of it
 sh /data/data/com.termux/files/home/media-services.sh stop jellyfin       # stop just one group/service
@@ -318,6 +323,12 @@ scp -P 8022 -r "C:\Users\{user.name}\Videos\Some.Show.S03" \
   --webui-port=8080`, PID to `/run/qbittorrent.pid`. Downloads live on the
   SSD (`/media/ssd/downloads/torrents/{incomplete,seeding}`), same tradeoff
   SABnzbd's did — see `architecture.md`.
+- **`start-bazarr.sh` / `stop-bazarr.sh`** — same shape as the Sonarr pair:
+  binds the SSD if not already mounted (fifth consumer, same generic pidfile
+  scan), `exec`s into `ubuntu.sh`, starts `python3 /opt/Bazarr/bazarr.py
+  --no-update --config=/opt/Bazarr/data`, PID to `/run/bazarr.pid`. Stop
+  mirrors the others' TERM→wait→KILL and only unmounts the SSD once no other
+  pidfile in `$ROOT/run` shows a live process.
 - **`media-services.sh`** — dispatcher over the pairs above, called as
   `{start|stop|restart} {all|jellyfin|downloads|<service>...}`. Targets
   resolve through a small service registry (`ALL_SERVICES` + `GROUP_*`

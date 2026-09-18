@@ -20,6 +20,8 @@ sonarr_scripts/start-sonarr.sh
 sonarr_scripts/stop-sonarr.sh
 prowlarr_scripts/start-prowlarr.sh
 prowlarr_scripts/stop-prowlarr.sh
+bazarr_scripts/start-bazarr.sh
+bazarr_scripts/stop-bazarr.sh
 qbittorrent_scripts/start-qbittorrent.sh
 qbittorrent_scripts/stop-qbittorrent.sh
 "
