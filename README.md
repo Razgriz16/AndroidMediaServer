@@ -167,7 +167,7 @@ sh /data/local/tmp/start-prowlarr.sh   # no SSD involved — Prowlarr only holds
 sh /data/local/tmp/stop-prowlarr.sh
 
 sh /data/local/tmp/start-bazarr.sh     # binds SSD if needed (shared with Jellyfin/Sonarr), enters chroot, starts Bazarr
-sh /data/local/tmp/stop-bazarr.sh      # kills Bazarr, unmounts SSD only if no other SSD consumer is still up
+sh /data/local/tmp/stop-bazarr.sh      # stops Bazarr via its stop-file protocol (see below), unmounts SSD only if no other SSD consumer is still up
 ```
 Sonarr's root/library folder and import target live on the SSD, same as
 Jellyfin — the two now **share** that mount. Prowlarr never touches media, so
@@ -323,12 +323,21 @@ scp -P 8022 -r "C:\Users\{user.name}\Videos\Some.Show.S03" \
   --webui-port=8080`, PID to `/run/qbittorrent.pid`. Downloads live on the
   SSD (`/media/ssd/downloads/torrents/{incomplete,seeding}`), same tradeoff
   SABnzbd's did — see `architecture.md`.
-- **`start-bazarr.sh` / `stop-bazarr.sh`** — same shape as the Sonarr pair:
-  binds the SSD if not already mounted (fifth consumer, same generic pidfile
-  scan), `exec`s into `ubuntu.sh`, starts `python3 /opt/Bazarr/bazarr.py
-  --no-update --config=/opt/Bazarr/data`, PID to `/run/bazarr.pid`. Stop
-  mirrors the others' TERM→wait→KILL and only unmounts the SSD once no other
-  pidfile in `$ROOT/run` shows a live process.
+- **`start-bazarr.sh` / `stop-bazarr.sh`** — start binds the SSD if not
+  already mounted (fifth consumer, same generic pidfile scan), `exec`s into
+  `ubuntu.sh`, activates the venv, starts `python3 /opt/bazarr/bazarr.py
+  --no-update --config=/opt/bazarr/data`, PID to `/run/bazarr.pid`. **Stop
+  does not mirror the others.** `bazarr.py` is a supervisor, not the
+  webserver itself — it spawns the real app as a child process
+  (`bazarr/main.py`) and only reaps it once it notices a `bazarr.stop` file
+  in its config dir, which it polls for every 5 s. It installs no SIGTERM
+  handler, so a plain `kill` on the pidfile PID (the generic `stop_service`
+  approach) just kills the supervisor outright and orphans the child, which
+  keeps the webserver up on port 6767. `stop-bazarr.sh` instead drops
+  `/opt/bazarr/data/bazarr.stop`, waits up to 20 s for the supervisor to exit
+  on its own, force-kills it if it doesn't, and in either case scans `/proc`
+  for a lingering `bazarr/main.py` child to kill directly before unmounting
+  the SSD (once no other pidfile in `$ROOT/run` shows a live process).
 - **`media-services.sh`** — dispatcher over the pairs above, called as
   `{start|stop|restart} {all|jellyfin|downloads|<service>...}`. Targets
   resolve through a small service registry (`ALL_SERVICES` + `GROUP_*`
