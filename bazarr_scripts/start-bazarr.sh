@@ -15,6 +15,7 @@ sh $UBUNTU /bin/bash -c '
   else
     echo "Starting Bazarr..."
     mkdir -p /opt/bazarr/data
+    source /opt/bazarr/venv/bin/activate
     nohup python3 /opt/bazarr/bazarr.py --no-update --config=/opt/bazarr/data \
                    >> /var/log/bazarr.log 2>&1 &
     echo $! > /run/bazarr.pid
@@ -36,3 +37,14 @@ if [ "$1" != "--no-shell" ]; then
   echo ""
   exec sh $UBUNTU
 fi
+root@localhost:/opt/bazarr# tail -f /var/log/bazarr.log
+  File "/opt/bazarr/bazarr/../custom_libs/subliminal_patch/providers/__init__.py", line 68, in <module>
+    mod = importlib.import_module("subliminal_patch.providers.%s" % module_name.lower())
+  File "/usr/lib/python3.14/importlib/__init__.py", line 88, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/bazarr/bazarr/../custom_libs/subliminal_patch/providers/zimuku.py", line 10, in <module>
+    from PIL import Image
+ModuleNotFoundError: No module named 'PIL'
+Bazarr child process has stopped unexpectedly. Shutting down...
+Bazarr exited with status code -106.
