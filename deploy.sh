@@ -35,6 +35,7 @@ chroot_scripts/chroot-unmount-watch.sh
 TO_TERMUX_HOME="
 ubuntu.sh
 common_scripts/media-services.sh
+common_scripts/termux-autostart.sh
 "
 
 REPO_DIR=$(cd "$(dirname "$0")" && pwd)
@@ -77,5 +78,22 @@ deploy_group() {
 deploy_group "$TMP" $TO_TMP
 deploy_group "$SERVICE_D" $TO_SERVICE_D
 deploy_group "$TERMUX_HOME" $TO_TERMUX_HOME
+
+# --- Termux autostart hook -------------------------------------------------
+# Make every new Termux session run termux-autostart.sh. Idempotent: only
+# appends the sourcing line to .bashrc if it isn't already there.
+BASHRC="$TERMUX_HOME/.bashrc"
+AUTOSTART_LINE='. "$HOME/termux-autostart.sh"'
+
+if [ -f "$BASHRC" ] && grep -qF "$AUTOSTART_LINE" "$BASHRC"; then
+  echo "unchanged: $BASHRC (autostart hook already present)"
+elif [ "$DRY_RUN" = "1" ]; then
+  echo "would add autostart hook to: $BASHRC"
+else
+  mkdir -p "$TERMUX_HOME"
+  touch "$BASHRC"
+  echo "$AUTOSTART_LINE" >> "$BASHRC"
+  echo "added autostart hook to: $BASHRC"
+fi
 
 [ "$DRY_RUN" = "1" ] && echo "(dry run — nothing changed)"

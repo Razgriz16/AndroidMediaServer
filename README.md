@@ -69,6 +69,7 @@ elsewhere; deploy by copying them to the paths below.
 | `common_scripts/ssd-env.sh` | `/data/local/tmp/ssd-env.sh` | sourced (`. /data/local/tmp/ssd-env.sh`), never run directly — shared SSD path + mount/unmount helpers for every script below that touches the SSD |
 | `common_scripts/stop-service.sh` | `/data/local/tmp/stop-service.sh` | sourced, never run directly — shared `stop_service <name> [--ssd]` used by every `stop-*.sh` below (kill-by-pidfile w/ 15s grace + force-kill, logging, optional SSD release) |
 | `common_scripts/media-services.sh` | `/data/data/com.termux/files/home/media-services.sh` | root shell, manual — dispatcher: `{start\|stop\|restart} {all\|jellyfin\|downloads\|<service>...}` |
+| `common_scripts/termux-autostart.sh` | `/data/data/com.termux/files/home/termux-autostart.sh` | sourced from `~/.bashrc` (hook appended by `deploy.sh`) — runs `media-services.sh start all` as root on every new Termux session |
 | `chroot_scripts/chroot-mount.sh` | `/data/adb/service.d/chroot-mount.sh` | root, at boot (Magisk `service.d`) |
 | `chroot_scripts/chroot-unmount.sh` | `/data/local/tmp/chroot-unmount.sh` | root, manually or from the shutdown watcher |
 | `chroot_scripts/chroot-unmount-watch.sh` | `/data/adb/service.d/chroot-unmount-watch.sh` | root, at boot — polls for shutdown, then calls the unmount script |
@@ -275,7 +276,13 @@ scp -P 8022 -r "C:\Users\{user.name}\Videos\Some.Show.S03" \
   and runs the unmount script when it fires. This only covers **graceful**
   power-off / reboot. Battery death, kernel panic, and hard power-button resets
   are not covered — nothing can cover them, power is gone before any script runs.
-- **SSD + Jellyfin** — deliberately manual.
+- **SSD + Jellyfin** — mount/start logic is deliberately manual (it only
+  *runs* when something asks for it), but something now does ask for it
+  automatically: opening Termux. `~/.bashrc` sources `termux-autostart.sh`,
+  which runs `media-services.sh start all` as root on every new session —
+  safe to repeat since every start script and the SSD bind mount are
+  idempotent. Expect one `su` prompt per session unless your root manager
+  remembers the grant.
 
 ---
 
@@ -448,7 +455,11 @@ apt / startup expected ~2–5×; streaming throughput was already near-native.
   a sourced `aliases.sh`; or copying scripts into `/system/bin` as `ub` /
   `mntub` / `umntub` / `jf` / `jfstop` (needs `/system` remounted rw).
   Putting `aliases.sh` in `service.d` **cannot work** — `service.d` runs
-  detached, aliases only exist in the shell that defines them.
+  detached, aliases only exist in the shell that defines them. (Separately,
+  the Termux *user's* `~/.bashrc` — not root's — now sources
+  `termux-autostart.sh` to auto-start services on session open; see
+  "Boot & shutdown automation" above. That's a different hook than the
+  convenience-alias idea discussed here.)
 - `proot-distro` guard function (block `proot-distro login` while chroot mounts
   are live) discussed, not added.
 
