@@ -69,7 +69,7 @@ elsewhere; deploy by copying them to the paths below.
 | `common_scripts/ssd-env.sh` | `/data/local/tmp/ssd-env.sh` | sourced (`. /data/local/tmp/ssd-env.sh`), never run directly — shared SSD path + mount/unmount helpers for every script below that touches the SSD |
 | `common_scripts/stop-service.sh` | `/data/local/tmp/stop-service.sh` | sourced, never run directly — shared `stop_service <name> [--ssd]` used by every `stop-*.sh` below (kill-by-pidfile w/ 15s grace + force-kill, logging, optional SSD release) |
 | `common_scripts/media-services.sh` | `/data/data/com.termux/files/home/media-services.sh` | root shell, manual — dispatcher: `{start\|stop\|restart} {all\|jellyfin\|downloads\|<service>...}` |
-| `common_scripts/termux-autostart.sh` | `/data/data/com.termux/files/home/termux-autostart.sh` | sourced from `~/.bashrc` (hook appended by `deploy.sh`) — runs `media-services.sh start all` as root on every new Termux session |
+| `common_scripts/termux-autostart.sh` | `/data/data/com.termux/files/home/termux-autostart.sh` | sourced from `~/.bashrc` (hook appended by `deploy.sh`) — runs `media-services.sh restart all` as root on every new Termux session |
 | `chroot_scripts/chroot-mount.sh` | `/data/adb/service.d/chroot-mount.sh` | root, at boot (Magisk `service.d`) |
 | `chroot_scripts/chroot-unmount.sh` | `/data/local/tmp/chroot-unmount.sh` | root, manually or from the shutdown watcher |
 | `chroot_scripts/chroot-unmount-watch.sh` | `/data/adb/service.d/chroot-unmount-watch.sh` | root, at boot — polls for shutdown, then calls the unmount script |
@@ -206,7 +206,10 @@ A thin dispatcher, not a reimplementation — it just calls the `start-<x>.sh` /
 `stop-<x>.sh` scripts above for whichever service(s) or group you name.
 `all`, `jellyfin`, and `downloads` are the built-in groups; any individual
 service name works too, and multiple names/groups can be combined in one
-call. Adding a new service later is a two-line change in `media-services.sh`
+call. `start all` / `restart all` also tail `/data/local/tmp/ubuntu-boot.log`
+(via `su -c`) right after, so failures during the all-services bring-up are
+visible without a separate command. Adding a new service later is a two-line
+change in `media-services.sh`
 (add it to `ALL_SERVICES`, add it to a group if it belongs to one) — no
 changes needed anywhere else. Every `start-<x>.sh` takes an optional
 `--no-shell` flag (used only by this dispatcher) that skips the interactive
@@ -279,7 +282,7 @@ scp -P 8022 -r "C:\Users\{user.name}\Videos\Some.Show.S03" \
 - **SSD + Jellyfin** — mount/start logic is deliberately manual (it only
   *runs* when something asks for it), but something now does ask for it
   automatically: opening Termux. `~/.bashrc` sources `termux-autostart.sh`,
-  which runs `media-services.sh start all` as root on every new session —
+  which runs `media-services.sh restart all` as root on every new session —
   safe to repeat since every start script and the SSD bind mount are
   idempotent. Expect one `su` prompt per session unless your root manager
   remembers the grant.

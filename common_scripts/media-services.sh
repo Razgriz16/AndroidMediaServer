@@ -110,6 +110,13 @@ usage() {
 action="$1"
 shift
 
+# Remember whether "all" was requested before expand_targets replaces it
+# with the individual service names.
+is_all=0
+for tok in "$@"; do
+  [ "$tok" = "all" ] && is_all=1
+done
+
 targets=$(expand_targets "$@") || exit 1
 [ -n "$targets" ] || usage
 
@@ -119,3 +126,11 @@ case "$action" in
   restart) stop_group $targets; start_group $targets ;;
   *)       usage ;;
 esac
+
+# "start all" / "restart all" bring up every service at once, so show the
+# boot log right after so failures are visible without a separate command.
+if [ "$is_all" = "1" ] && { [ "$action" = "start" ] || [ "$action" = "restart" ]; }; then
+  echo ""
+  echo "== ubuntu-boot.log (tail) =="
+  su -c "tail /data/local/tmp/ubuntu-boot.log"
+fi
